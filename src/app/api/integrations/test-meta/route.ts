@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         accessTokenPreview: i.accessToken ? `${i.accessToken.substring(0, 10)}...` : null
       })),
       env: {
-        hasMeta App_ID: !!process.env.META_APP_ID,
+        hasMetaAppID: !!process.env.META_APP_ID,
         hasMetaAppSecret: !!process.env.META_APP_SECRET,
         nextAuthUrl: process.env.NEXTAUTH_URL
       }
