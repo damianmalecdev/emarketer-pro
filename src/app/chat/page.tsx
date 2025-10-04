@@ -145,13 +145,13 @@ export default function ChatPage() {
                           </Avatar>
                         )}
                         <div
-                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          className={`max-w-[70%] rounded-lg px-4 py-2 break-words ${
                             msg.role === 'user'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-900'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(msg.createdAt).toLocaleTimeString()}
                           </p>
