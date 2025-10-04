@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  password      String?
+  plan          String        @default("free")
+  role          String        @default("user")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  integrations  Integration[]
+  campaigns     Campaign[]
+  alerts        Alert[]
+  reports       Report[]
+  messages      ChatMessage[]
+  events        Event[]
+}
+
+model Integration {
+  id           String     @id @default(uuid())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  platform     String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  accountId    String?
+  accountName  String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  campaigns    Campaign[]
+
+  @@unique([userId, platform, accountId])
+}
+
+model Campaign {
+  id            String       @id @default(uuid())
+  integration   Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  integrationId String?
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  name          String
+  platform      String
+  campaignId    String
+  spend         Float        @default(0)
+  impressions   Int          @default(0)
+  clicks        Int          @default(0)
+  conversions   Int          @default(0)
+  revenue       Float        @default(0)
+  ctr           Float        @default(0)
+  cpc           Float        @default(0)
+  roas          Float        @default(0)
+  date          DateTime
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  events        Event[]
+}
+
+model Event {
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignId String?
+  eventName  String
+  eventValue Float?
+  eventTime  DateTime
+  source     String
+  createdAt  DateTime  @default(now())
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  message   String
+  type      String
+  severity  String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String
+  type      String
+  period    String
+  summary   String
+  aiComment String?
+  fileUrl   String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
