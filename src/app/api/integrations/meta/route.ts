@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     if (action === 'auth-url') {
       // Generate Meta OAuth URL
       const redirectUri = `${process.env.NEXTAUTH_URL}/api/integrations/meta/callback`
-      // Use basic permissions that don't require App Review for testing
-      const scope = 'public_profile,email'
+      // Request full ads permissions - requires App Review from Facebook
+      const scope = 'ads_read,ads_management,business_management,pages_read_engagement'
       const state = session.user.id // Use user ID as state
       
       const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +

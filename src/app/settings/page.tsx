@@ -87,7 +87,7 @@ export default function SettingsPage() {
   const handleSyncMeta = async () => {
     try {
       setIsSyncing(true)
-      setSyncMessage('Syncing data from Meta Ads...')
+      setSyncMessage('Syncing data from Meta Ads API...')
 
       const response = await fetch('/api/integrations/meta/sync', {
         method: 'POST'
@@ -96,44 +96,20 @@ export default function SettingsPage() {
       const data = await response.json()
 
       if (response.ok) {
-        setSyncMessage(`✅ Synced ${data.campaigns} campaigns with ${data.insights} insights!`)
+        setSyncMessage(`✅ Successfully synced ${data.campaigns} campaigns with ${data.insights} insights from Meta!`)
         setTimeout(() => {
           window.location.reload()
         }, 2000)
       } else {
-        setSyncMessage(`❌ Sync failed: ${data.error}`)
+        setSyncMessage(`❌ ${data.error || 'Sync failed'}`)
+        setTimeout(() => setSyncMessage(''), 8000)
       }
     } catch (error) {
       console.error('Error syncing Meta:', error)
       setSyncMessage('❌ Sync failed: ' + String(error))
+      setTimeout(() => setSyncMessage(''), 8000)
     } finally {
       setIsSyncing(false)
-    }
-  }
-
-  const handleMockConnectMeta = async () => {
-    try {
-      // Create mock connection for testing
-      const mockIntegration = {
-        platform: 'meta',
-        accessToken: 'mock_meta_token_' + Date.now(),
-        accountId: 'act_123456789',
-        accountName: 'Mock Meta Ads Account',
-        isActive: true
-      }
-
-      const response = await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mockIntegration)
-      })
-
-      if (response.ok) {
-        // Refresh integrations
-        window.location.reload()
-      }
-    } catch (error) {
-      console.error('Error connecting Meta (mock):', error)
     }
   }
 
@@ -200,14 +176,9 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-2">
-                          <Button onClick={handleConnectMeta} size="sm">
-                            Connect
-                          </Button>
-                          <Button onClick={handleMockConnectMeta} size="sm" variant="outline">
-                            Test Mock
-                          </Button>
-                        </div>
+                        <Button onClick={handleConnectMeta} size="sm">
+                          Connect
+                        </Button>
                       )}
                     </div>
                   </div>
