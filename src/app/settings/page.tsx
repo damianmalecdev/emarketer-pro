@@ -15,11 +15,16 @@ import {
   Calendar,
   Settings as SettingsIcon,
   Shield,
-  CreditCard
+  CreditCard,
+  RefreshCw,
+  Loader2
 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function SettingsPage() {
   const { data: session } = useSession()
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
 
   const { data: integrations = [] } = useQuery({
     queryKey: ['integrations'],
@@ -79,6 +84,33 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSyncMeta = async () => {
+    try {
+      setIsSyncing(true)
+      setSyncMessage('Syncing data from Meta Ads...')
+
+      const response = await fetch('/api/integrations/meta/sync', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSyncMessage(`✅ Synced ${data.campaigns} campaigns with ${data.insights} insights!`)
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        setSyncMessage(`❌ Sync failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error syncing Meta:', error)
+      setSyncMessage('❌ Sync failed: ' + String(error))
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const handleMockConnectMeta = async () => {
     try {
       // Create mock connection for testing
@@ -130,40 +162,60 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Meta Ads */}
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">M</span>
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold">M</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Meta Ads</h3>
+                        <p className="text-sm text-gray-600">Facebook & Instagram campaigns</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">Meta Ads</h3>
-                      <p className="text-sm text-gray-600">Facebook & Instagram campaigns</p>
+                    <div className="flex items-center space-x-2">
+                      {integrations.find(i => i.platform === 'meta' && i.isActive) ? (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            Connected
+                          </Badge>
+                          <Button 
+                            onClick={handleSyncMeta} 
+                            size="sm" 
+                            variant="outline"
+                            disabled={isSyncing}
+                          >
+                            {isSyncing ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                            <span className="ml-2">Sync</span>
+                          </Button>
+                          <Button onClick={handleReconnectMeta} size="sm" variant="outline">
+                            Reconnect
+                          </Button>
+                          <Button onClick={handleDisconnectMeta} size="sm" variant="destructive">
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Button onClick={handleConnectMeta} size="sm">
+                            Connect
+                          </Button>
+                          <Button onClick={handleMockConnectMeta} size="sm" variant="outline">
+                            Test Mock
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {integrations.find(i => i.platform === 'meta' && i.isActive) ? (
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Connected
-                        </Badge>
-                        <Button onClick={handleReconnectMeta} size="sm" variant="outline">
-                          Reconnect
-                        </Button>
-                        <Button onClick={handleDisconnectMeta} size="sm" variant="destructive">
-                          Disconnect
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Button onClick={handleConnectMeta} size="sm">
-                          Connect
-                        </Button>
-                        <Button onClick={handleMockConnectMeta} size="sm" variant="outline">
-                          Test Mock
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  {syncMessage && (
+                    <div className="text-sm p-2 bg-blue-50 text-blue-900 rounded">
+                      {syncMessage}
+                    </div>
+                  )}
                 </div>
 
                 {/* Google Ads */}
