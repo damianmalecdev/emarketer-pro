@@ -145,11 +145,19 @@ async function syncMetaIntegration(integration: any) {
         a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'
       )?.value || 0
 
-      const revenue = parseFloat(conversions) * 50
+      // Calculate metrics
+      const conversionsNum = parseFloat(conversions)
+      const revenue = conversionsNum * 50
       const spend = parseFloat(insights.spend || 0)
+      const impressions = parseInt(insights.impressions || 0)
+      const clicks = parseInt(insights.clicks || 0)
+      const ctr = parseFloat(insights.ctr || 0)
+      const cpc = parseFloat(insights.cpc || 0)
       const roas = spend > 0 ? revenue / spend : 0
+      const cpa = conversionsNum > 0 ? spend / conversionsNum : 0
 
-      await prisma.campaign.upsert({
+      // Step 1: Upsert Campaign (master data)
+      const dbCampaign = await prisma.campaign.upsert({
         where: {
           platform_name_userId: {
             platform: 'meta',
@@ -158,33 +166,44 @@ async function syncMetaIntegration(integration: any) {
           }
         },
         update: {
-          campaignId: campaign.id,
+          platformCampaignId: campaign.id,
           status: campaign.status,
-          spend: spend,
-          impressions: parseInt(insights.impressions || 0),
-          clicks: parseInt(insights.clicks || 0),
-          conversions: parseFloat(conversions),
-          revenue: revenue,
-          ctr: parseFloat(insights.ctr || 0),
-          cpc: parseFloat(insights.cpc || 0),
-          roas: roas,
-          date: new Date()
+          integrationId: integration.id,
         },
         create: {
           userId: integration.userId,
+          integrationId: integration.id,
           platform: 'meta',
-          campaignId: campaign.id,
+          platformCampaignId: campaign.id,
           name: campaign.name,
           status: campaign.status,
-          spend: spend,
-          impressions: parseInt(insights.impressions || 0),
-          clicks: parseInt(insights.clicks || 0),
-          conversions: parseFloat(conversions),
-          revenue: revenue,
-          ctr: parseFloat(insights.ctr || 0),
-          cpc: parseFloat(insights.cpc || 0),
-          roas: roas,
-          date: new Date()
+        }
+      })
+
+      // Step 2: Create daily snapshot
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      await prisma.campaignMetric.upsert({
+        where: {
+          campaignId_date: {
+            campaignId: dbCampaign.id,
+            date: today
+          }
+        },
+        update: { spend, impressions, clicks, conversions: conversionsNum, revenue, ctr, cpc, roas, cpa },
+        create: {
+          campaignId: dbCampaign.id,
+          date: today,
+          spend,
+          impressions,
+          clicks,
+          conversions: conversionsNum,
+          revenue,
+          ctr,
+          cpc,
+          roas,
+          cpa,
         }
       })
 
@@ -316,11 +335,18 @@ async function syncGoogleAdsIntegration(integration: any) {
     for (const [campaignId, campaign] of campaignMap) {
       const spend = campaign.cost
       const revenue = campaign.conversionValue
+      const conversions = campaign.conversions
+      const impressions = campaign.impressions
+      const clicks = campaign.clicks
+      
+      // Calculate metrics
       const roas = spend > 0 ? revenue / spend : 0
-      const ctr = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0
-      const cpc = campaign.clicks > 0 ? spend / campaign.clicks : 0
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
+      const cpc = clicks > 0 ? spend / clicks : 0
+      const cpa = conversions > 0 ? spend / conversions : 0
 
-      await prisma.campaign.upsert({
+      // Step 1: Upsert Campaign (master data)
+      const dbCampaign = await prisma.campaign.upsert({
         where: {
           platform_name_userId: {
             platform: 'google-ads',
@@ -329,35 +355,44 @@ async function syncGoogleAdsIntegration(integration: any) {
           }
         },
         update: {
-          campaignId: campaignId,
+          platformCampaignId: campaignId,
           status: campaign.status,
-          spend: spend,
-          impressions: campaign.impressions,
-          clicks: campaign.clicks,
-          conversions: campaign.conversions,
-          revenue: revenue,
-          ctr: ctr,
-          cpc: cpc,
-          roas: roas,
-          date: new Date(),
-          integrationId: integration.id
+          integrationId: integration.id,
         },
         create: {
           userId: integration.userId,
           integrationId: integration.id,
           platform: 'google-ads',
-          campaignId: campaignId,
+          platformCampaignId: campaignId,
           name: campaign.name,
           status: campaign.status,
-          spend: spend,
-          impressions: campaign.impressions,
-          clicks: campaign.clicks,
-          conversions: campaign.conversions,
-          revenue: revenue,
-          ctr: ctr,
-          cpc: cpc,
-          roas: roas,
-          date: new Date()
+        }
+      })
+
+      // Step 2: Create daily snapshot
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      await prisma.campaignMetric.upsert({
+        where: {
+          campaignId_date: {
+            campaignId: dbCampaign.id,
+            date: today
+          }
+        },
+        update: { spend, impressions, clicks, conversions, revenue, ctr, cpc, roas, cpa },
+        create: {
+          campaignId: dbCampaign.id,
+          date: today,
+          spend,
+          impressions,
+          clicks,
+          conversions,
+          revenue,
+          ctr,
+          cpc,
+          roas,
+          cpa,
         }
       })
 
