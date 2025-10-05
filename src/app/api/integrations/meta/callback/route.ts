@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/settings?error=meta_auth_invalid`)
     }
 
+    // Ensure user exists
+    await prisma.user.upsert({
+      where: { id: state },
+      update: {},
+      create: { id: state, email: '', name: '' }
+    })
+
     // Exchange code for access token
     const tokenResponse = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
       method: 'POST',

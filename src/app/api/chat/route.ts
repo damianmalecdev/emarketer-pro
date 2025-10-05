@@ -18,6 +18,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
+    // Ensure user exists in database
+    await prisma.user.upsert({
+      where: { id: session.user.id },
+      update: {},
+      create: { 
+        id: session.user.id, 
+        email: session.user.email || '', 
+        name: session.user.name || '' 
+      }
+    })
+
     // Save user message
     await prisma.chatMessage.create({
       data: {

@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/settings?error=missing_params`)
     }
 
+    // Ensure user exists
+    await prisma.user.upsert({
+      where: { id: state },
+      update: {},
+      create: { id: state, email: '', name: '' }
+    })
+
     // Exchange code for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
