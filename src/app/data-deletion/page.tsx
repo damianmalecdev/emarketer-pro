@@ -28,10 +28,10 @@ export default function DataDeletionPage() {
               <p className="text-lg text-gray-800 leading-relaxed">
                 To permanently delete your data from eMarketer.pro, please contact us at{' '}
                 <a 
-                  href="mailto:kontakt@malecmarketing.pl" 
+                  href="mailto:kontakt@emarketer.pro" 
                   className="text-blue-600 hover:text-blue-800 font-semibold underline"
                 >
-                  kontakt@malecmarketing.pl
+                  kontakt@emarketer.pro
                 </a>
               </p>
             </div>
@@ -76,7 +76,7 @@ export default function DataDeletionPage() {
                 </p>
                 <ol className="list-decimal list-inside space-y-2 ml-4">
                   <li>Visiting this page: <code className="bg-gray-100 px-2 py-1 rounded text-sm">https://emarketer.pro/data-deletion</code></li>
-                  <li>Sending an email to <a href="mailto:kontakt@malecmarketing.pl" className="text-blue-600 hover:text-blue-800 underline font-semibold">kontakt@malecmarketing.pl</a></li>
+                  <li>Sending an email to <a href="mailto:kontakt@emarketer.pro" className="text-blue-600 hover:text-blue-800 underline font-semibold">kontakt@emarketer.pro</a></li>
                 </ol>
                 <p className="leading-relaxed mt-4">
                   Please include your account email address in your deletion request to help us identify your account.
@@ -94,11 +94,11 @@ export default function DataDeletionPage() {
               If you have any questions about data deletion, please contact us
             </p>
             <a 
-              href="mailto:kontakt@malecmarketing.pl"
+              href="mailto:kontakt@emarketer.pro"
               className="inline-flex items-center justify-center bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
             >
               <Mail className="mr-2 h-5 w-5" />
-              kontakt@malecmarketing.pl
+              kontakt@emarketer.pro
             </a>
           </CardContent>
         </Card>
