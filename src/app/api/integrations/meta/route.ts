@@ -16,17 +16,18 @@ export async function GET(request: NextRequest) {
 
     if (action === 'auth-url') {
       // Generate Meta OAuth URL
-      const redirectUri = `${process.env.NEXTAUTH_URL}/api/integrations/meta/callback`
-      // Request full ads permissions - requires App Review from Facebook
-      const scope = 'ads_read,ads_management,business_management,pages_read_engagement'
+      const redirectUri = \`\${process.env.NEXTAUTH_URL}/api/integrations/meta/callback\`
+      // Use basic permissions for testing - these don't require App Review
+      // After Facebook approves your app, change to: ads_read,ads_management,business_management
+      const scope = 'public_profile,email'
       const state = session.user.id // Use user ID as state
       
-      const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
-        `client_id=${process.env.META_APP_ID}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `scope=${scope}&` +
-        `state=${state}&` +
-        `response_type=code`
+      const authUrl = \`https://www.facebook.com/v18.0/dialog/oauth?\` +
+        \`client_id=\${process.env.META_APP_ID}&\` +
+        \`redirect_uri=\${encodeURIComponent(redirectUri)}&\` +
+        \`scope=\${scope}&\` +
+        \`state=\${state}&\` +
+        \`response_type=code\`
 
       return NextResponse.json({ authUrl })
     }
