@@ -170,11 +170,18 @@ export async function POST(request: NextRequest) {
       for (const [campaignId, campaign] of campaignMap) {
         const spend = campaign.cost
         const revenue = campaign.conversionValue
+        const conversions = campaign.conversions
+        const impressions = campaign.impressions
+        const clicks = campaign.clicks
+        
+        // Calculate metrics
         const roas = spend > 0 ? revenue / spend : 0
-        const ctr = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0
-        const cpc = campaign.clicks > 0 ? spend / campaign.clicks : 0
+        const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
+        const cpc = clicks > 0 ? spend / clicks : 0
+        const cpa = conversions > 0 ? spend / conversions : 0
 
-        await prisma.campaign.upsert({
+        // Step 1: Upsert Campaign (master data)
+        const dbCampaign = await prisma.campaign.upsert({
           where: {
             platform_name_userId: {
               platform: 'google-ads',
@@ -183,35 +190,54 @@ export async function POST(request: NextRequest) {
             }
           },
           update: {
-            campaignId: campaignId,
+            platformCampaignId: campaignId,
             status: campaign.status,
-            spend: spend,
-            impressions: campaign.impressions,
-            clicks: campaign.clicks,
-            conversions: campaign.conversions,
-            revenue: revenue,
-            ctr: ctr,
-            cpc: cpc,
-            roas: roas,
-            date: new Date(),
-            integrationId: integration.id
+            integrationId: integration.id,
           },
           create: {
             userId: session.user.id,
             integrationId: integration.id,
             platform: 'google-ads',
-            campaignId: campaignId,
+            platformCampaignId: campaignId,
             name: campaign.name,
             status: campaign.status,
-            spend: spend,
-            impressions: campaign.impressions,
-            clicks: campaign.clicks,
-            conversions: campaign.conversions,
-            revenue: revenue,
-            ctr: ctr,
-            cpc: cpc,
-            roas: roas,
-            date: new Date()
+          }
+        })
+
+        // Step 2: Create daily snapshot in CampaignMetric
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Normalize to midnight
+
+        await prisma.campaignMetric.upsert({
+          where: {
+            campaignId_date: {
+              campaignId: dbCampaign.id,
+              date: today
+            }
+          },
+          update: {
+            spend,
+            impressions,
+            clicks,
+            conversions,
+            revenue,
+            ctr,
+            cpc,
+            roas,
+            cpa,
+          },
+          create: {
+            campaignId: dbCampaign.id,
+            date: today,
+            spend,
+            impressions,
+            clicks,
+            conversions,
+            revenue,
+            ctr,
+            cpc,
+            roas,
+            cpa,
           }
         })
 
@@ -254,17 +280,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get last sync info
-    const lastCampaign = await prisma.campaign.findFirst({
-      where: {
-        userId: session.user.id,
-        platform: 'google-ads'
-      },
-      orderBy: {
-        date: 'desc'
-      }
-    })
-
+    // Get campaign count
     const campaignCount = await prisma.campaign.count({
       where: {
         userId: session.user.id,
@@ -272,9 +288,27 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get last metric sync date
+    const lastMetric = await prisma.campaignMetric.findFirst({
+      where: {
+        campaign: {
+          userId: session.user.id,
+          platform: 'google-ads'
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      select: {
+        date: true,
+        createdAt: true
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      lastSync: lastCampaign?.date || null,
+      lastSync: lastMetric?.createdAt || null,
+      lastMetricDate: lastMetric?.date || null,
       campaignCount
     })
 
