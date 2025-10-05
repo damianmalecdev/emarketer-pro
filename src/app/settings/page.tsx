@@ -22,13 +22,21 @@ import {
 import { useState } from 'react'
 import { useLanguage } from '@/hooks/useLanguage'
 
+interface Integration {
+  id: string
+  platform: string
+  isActive: boolean
+  accountId?: string
+  accountName?: string
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession()
   const { t } = useLanguage()
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
 
-  const { data: integrations = [] } = useQuery({
+  const { data: integrations = [] } = useQuery<Integration[]>({
     queryKey: ['integrations'],
     queryFn: async () => {
       const response = await fetch('/api/integrations')
