@@ -20,9 +20,11 @@ import {
   Loader2
 } from 'lucide-react'
 import { useState } from 'react'
+import { useLanguage } from '@/hooks/useLanguage'
 
 export default function SettingsPage() {
   const { data: session } = useSession()
+  const { t } = useLanguage()
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
 
@@ -144,8 +146,8 @@ export default function SettingsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your account and preferences</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t.settings.title}</h1>
+          <p className="text-gray-600">{t.settings.subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -156,10 +158,10 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <SettingsIcon className="mr-2 h-5 w-5" />
-                  Integrations
+                  {t.settings.integrations}
                 </CardTitle>
                 <CardDescription>
-                  Connect your marketing platforms to sync data
+                  {t.settings.integrationsDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -171,15 +173,15 @@ export default function SettingsPage() {
                         <span className="text-white font-bold">M</span>
                       </div>
                       <div>
-                        <h3 className="font-medium">Meta Ads</h3>
-                        <p className="text-sm text-gray-600">Facebook & Instagram campaigns</p>
+                        <h3 className="font-medium">{t.settings.platforms.meta.name}</h3>
+                        <p className="text-sm text-gray-600">{t.settings.platforms.meta.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {integrations.find(i => i.platform === 'meta' && i.isActive) ? (
                         <div className="flex items-center space-x-2">
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            Connected
+                            {t.settings.connected}
                           </Badge>
                           <Button 
                             onClick={handleSyncMeta} 
@@ -192,18 +194,18 @@ export default function SettingsPage() {
                             ) : (
                               <RefreshCw className="h-4 w-4" />
                             )}
-                            <span className="ml-2">Sync</span>
+                            <span className="ml-2">{isSyncing ? t.settings.syncing : t.settings.syncData}</span>
                           </Button>
                           <Button onClick={handleReconnectMeta} size="sm" variant="outline">
-                            Reconnect
+                            {t.settings.reconnect}
                           </Button>
                           <Button onClick={handleDisconnectMeta} size="sm" variant="destructive">
-                            Disconnect
+                            {t.settings.disconnect}
                           </Button>
                         </div>
                       ) : (
                         <Button onClick={handleConnectMeta} size="sm">
-                          Connect
+                          {t.settings.connect}
                         </Button>
                       )}
                     </div>
@@ -222,23 +224,23 @@ export default function SettingsPage() {
                       <span className="text-white font-bold">G</span>
                     </div>
                     <div>
-                      <h3 className="font-medium">Google Ads</h3>
-                      <p className="text-sm text-gray-600">Search & display campaigns</p>
+                      <h3 className="font-medium">{t.settings.platforms.googleAds.name}</h3>
+                      <p className="text-sm text-gray-600">{t.settings.platforms.googleAds.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {integrations.find(i => i.platform === 'google-ads' && i.isActive) ? (
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Connected
+                          {t.settings.connected}
                         </Badge>
                         <Button onClick={handleDisconnectGoogleAds} size="sm" variant="destructive">
-                          Disconnect
+                          {t.settings.disconnect}
                         </Button>
                       </div>
                     ) : (
                       <Button onClick={handleConnectGoogleAds} size="sm">
-                        Connect
+                        {t.settings.connect}
                       </Button>
                     )}
                   </div>
@@ -251,8 +253,8 @@ export default function SettingsPage() {
                       <span className="text-white font-bold">GA</span>
                     </div>
                     <div>
-                      <h3 className="font-medium">Google Analytics 4</h3>
-                      <p className="text-sm text-gray-600">Website analytics & conversions</p>
+                      <h3 className="font-medium">{t.settings.platforms.ga4.name}</h3>
+                      <p className="text-sm text-gray-600">{t.settings.platforms.ga4.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -265,10 +267,10 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <User className="mr-2 h-5 w-5" />
-                  Profile Information
+                  {t.settings.profile}
                 </CardTitle>
                 <CardDescription>
-                  Update your personal information and profile details
+                  {t.settings.profileDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -291,25 +293,25 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name">{t.settings.name}</Label>
                     <Input
                       id="name"
                       defaultValue={session?.user?.name || ''}
-                      placeholder="Enter your full name"
+                      placeholder={t.settings.name}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email">{t.settings.email}</Label>
                     <Input
                       id="email"
                       type="email"
                       defaultValue={session?.user?.email || ''}
-                      placeholder="Enter your email"
+                      placeholder={t.settings.email}
                     />
                   </div>
                 </div>
 
-                <Button>Save Changes</Button>
+                <Button>{t.settings.saveChanges}</Button>
               </CardContent>
             </Card>
 
