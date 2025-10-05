@@ -113,6 +113,32 @@ export default function SettingsPage() {
     }
   }
 
+  const handleConnectGoogleAds = async () => {
+    try {
+      const response = await fetch('/api/integrations/google-ads?action=auth-url')
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      }
+    } catch (error) {
+      console.error('Error connecting Google Ads:', error)
+    }
+  }
+
+  const handleDisconnectGoogleAds = async () => {
+    try {
+      const existingIntegration = integrations.find(i => i.platform === 'google-ads' && i.isActive)
+      if (existingIntegration) {
+        await fetch(`/api/integrations?id=${existingIntegration.id}`, {
+          method: 'DELETE'
+        })
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Error disconnecting Google Ads:', error)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -201,7 +227,20 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline">Coming Soon</Badge>
+                    {integrations.find(i => i.platform === 'google-ads' && i.isActive) ? (
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          Connected
+                        </Badge>
+                        <Button onClick={handleDisconnectGoogleAds} size="sm" variant="destructive">
+                          Disconnect
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button onClick={handleConnectGoogleAds} size="sm">
+                        Connect
+                      </Button>
+                    )}
                   </div>
                 </div>
 
