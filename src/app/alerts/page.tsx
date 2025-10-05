@@ -16,9 +16,11 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react'
+import { useLanguage } from '@/hooks/useLanguage'
 
 export default function AlertsPage() {
   const queryClient = useQueryClient()
+  const { t } = useLanguage()
 
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ['alerts'],
@@ -105,12 +107,12 @@ export default function AlertsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Alerts</h1>
-            <p className="text-gray-600 mt-1">Monitor your marketing campaigns and performance</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t.alerts.title}</h1>
+            <p className="text-gray-600 mt-1">{t.alerts.subtitle}</p>
           </div>
           <Badge variant="secondary" className="flex items-center px-4 py-2 text-base">
             <Bell className="mr-2 h-4 w-4" />
-            {unreadAlerts.length} unread
+            {unreadAlerts.length} {t.alerts.unread}
           </Badge>
         </div>
 
@@ -120,10 +122,10 @@ export default function AlertsPage() {
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white">
               <CardTitle className="flex items-center text-xl">
                 <Bell className="mr-2 h-6 w-6 text-blue-600" />
-                Unread Alerts ({unreadAlerts.length})
+                {t.alerts.unreadAlerts} ({unreadAlerts.length})
               </CardTitle>
               <CardDescription className="text-base">
-                New notifications that require your attention
+                {t.alerts.unreadDescription}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
@@ -142,7 +144,7 @@ export default function AlertsPage() {
                           {alert.message}
                         </p>
                         <Badge className={`${getSeverityColor(alert.severity)} font-semibold`}>
-                          {alert.severity}
+                          {t.alerts.severity[alert.severity as keyof typeof t.alerts.severity] || alert.severity}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600">
@@ -172,25 +174,25 @@ export default function AlertsPage() {
         {/* All Alerts */}
         <Card className="shadow-md">
           <CardHeader className="bg-gray-50">
-            <CardTitle className="text-xl">All Alerts</CardTitle>
+            <CardTitle className="text-xl">{t.alerts.allAlerts}</CardTitle>
             <CardDescription className="text-base">
-              Complete history of your marketing alerts and notifications
+              {t.alerts.allDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <span className="ml-2 mt-4 text-gray-600">Loading alerts...</span>
+                <span className="ml-2 mt-4 text-gray-600">{t.alerts.loading}</span>
               </div>
             ) : alerts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                   <Bell className="h-8 w-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">No alerts yet</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t.alerts.noAlertsYet}</h3>
                 <p className="mt-2 text-base text-gray-600 max-w-sm mx-auto">
-                  Alerts will appear here when we detect important changes in your campaigns.
+                  {t.alerts.noAlertsDescription}
                 </p>
               </div>
             ) : (
@@ -213,12 +215,12 @@ export default function AlertsPage() {
                           <p className={`text-base ${alert.isRead ? 'text-gray-600' : 'text-gray-900 font-semibold'}`}>
                             {alert.message}
                           </p>
-                          <Badge className={`${getSeverityColor(alert.severity)} font-semibold`}>
-                            {alert.severity}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {alert.type}
-                          </Badge>
+                        <Badge className={`${getSeverityColor(alert.severity)} font-semibold`}>
+                          {t.alerts.severity[alert.severity as keyof typeof t.alerts.severity] || alert.severity}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {t.alerts.type[alert.type as keyof typeof t.alerts.type] || alert.type}
+                        </Badge>
                         </div>
                         <p className="text-sm text-gray-500">
                           {formatDate(alert.createdAt)}

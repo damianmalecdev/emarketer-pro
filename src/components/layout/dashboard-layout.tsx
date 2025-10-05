@@ -32,6 +32,8 @@ import {
   LogOut,
   User
 } from 'lucide-react'
+import { useLanguage } from '@/hooks/useLanguage'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -41,13 +43,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { t } = useLanguage()
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Reports', href: '/reports', icon: FileText },
-    { name: 'Alerts', href: '/alerts', icon: Bell },
-    { name: 'AI Assistant', href: '/chat', icon: MessageSquare },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: t.nav.dashboard, href: '/dashboard', icon: Home },
+    { name: t.nav.reports, href: '/reports', icon: FileText },
+    { name: t.nav.alerts, href: '/alerts', icon: Bell },
+    { name: t.nav.aiAssistant, href: '/chat', icon: MessageSquare },
+    { name: t.nav.settings, href: '/settings', icon: Settings },
   ]
 
   const handleSignOut = async () => {
@@ -145,6 +148,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Language Switcher */}
+              <LanguageSwitcher />
+
               {/* Notifications */}
               <Button variant="ghost" size="sm">
                 <Bell className="h-5 w-5" />
@@ -177,19 +183,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>{t.settings.profile}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>{t.nav.settings}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
+                    <span>{t.nav.signOut}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
