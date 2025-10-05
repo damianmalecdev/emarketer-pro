@@ -135,6 +135,35 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSyncGoogleAds = async () => {
+    try {
+      setIsSyncing(true)
+      setSyncMessage('Syncing data from Google Ads API...')
+
+      const response = await fetch('/api/integrations/google-ads/sync', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSyncMessage(`✅ Successfully synced ${data.campaigns} campaigns from Google Ads!`)
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        setSyncMessage(`❌ ${data.error || 'Sync failed'}`)
+        setTimeout(() => setSyncMessage(''), 8000)
+      }
+    } catch (error) {
+      console.error('Error syncing Google Ads:', error)
+      setSyncMessage('❌ Sync failed: ' + String(error))
+      setTimeout(() => setSyncMessage(''), 8000)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const handleDisconnectGoogleAds = async () => {
     try {
       const existingIntegration = integrations.find(i => i.platform === 'google-ads' && i.isActive)
@@ -226,31 +255,46 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Google Ads */}
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">G</span>
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{t.settings.platforms.googleAds.name}</h3>
-                      <p className="text-sm text-gray-600">{t.settings.platforms.googleAds.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {integrations.find(i => i.platform === 'google-ads' && i.isActive) ? (
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {t.settings.connected}
-                        </Badge>
-                        <Button onClick={handleDisconnectGoogleAds} size="sm" variant="destructive">
-                          {t.settings.disconnect}
-                        </Button>
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold">G</span>
                       </div>
-                    ) : (
-                      <Button onClick={handleConnectGoogleAds} size="sm">
-                        {t.settings.connect}
-                      </Button>
-                    )}
+                      <div>
+                        <h3 className="font-medium">{t.settings.platforms.googleAds.name}</h3>
+                        <p className="text-sm text-gray-600">{t.settings.platforms.googleAds.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {integrations.find(i => i.platform === 'google-ads' && i.isActive) ? (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {t.settings.connected}
+                          </Badge>
+                          <Button 
+                            onClick={handleSyncGoogleAds} 
+                            size="sm" 
+                            variant="outline"
+                            disabled={isSyncing}
+                          >
+                            {isSyncing ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                            <span className="ml-2">{isSyncing ? t.settings.syncing : t.settings.syncData}</span>
+                          </Button>
+                          <Button onClick={handleDisconnectGoogleAds} size="sm" variant="destructive">
+                            {t.settings.disconnect}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button onClick={handleConnectGoogleAds} size="sm">
+                          {t.settings.connect}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
