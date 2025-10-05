@@ -33,5 +33,6 @@ export const config = {
     '/api/alerts/:path*',
     '/api/integrations/:path*',
     '/api/mock-data/:path*'
-  ]
+  ],
+  runtime: 'nodejs'
 }
