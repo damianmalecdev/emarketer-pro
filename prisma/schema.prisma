@@ -82,29 +82,63 @@ model Integration {
 }
 
 model Campaign {
-  id            String       @id @default(uuid())
-  integration   Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
-  integrationId String?
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String
-  name          String
-  platform      String
-  campaignId    String
-  status        String?
-  spend         Float        @default(0)
-  impressions   Int          @default(0)
-  clicks        Int          @default(0)
-  conversions   Int          @default(0)
-  revenue       Float        @default(0)
-  ctr           Float        @default(0)
-  cpc           Float        @default(0)
-  roas          Float        @default(0)
-  date          DateTime
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  events        Event[]
+  id                 String            @id @default(uuid())
+  integration        Integration?      @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  integrationId      String?
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  name               String
+  platform           String
+  platformCampaignId String            @default("")  // ID from API (meta:123456, google:789012)
+  status             String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  
+  // Relations
+  events             Event[]
+  metrics            CampaignMetric[]  // NEW: One-to-Many relationship
+  
+  // Legacy fields (kept for backward compatibility during migration)
+  campaignId         String?           // Deprecated: use platformCampaignId
+  spend              Float?            @default(0)
+  impressions        Int?              @default(0)
+  clicks             Int?              @default(0)
+  conversions        Int?              @default(0)
+  revenue            Float?            @default(0)
+  ctr                Float?            @default(0)
+  cpc                Float?            @default(0)
+  roas               Float?            @default(0)
+  date               DateTime?
 
-  @@unique([platform, name, userId])
+  @@index([userId, platform])
+  @@index([platform])
+}
+
+// NEW: Time-series metrics table for daily snapshots
+model CampaignMetric {
+  id          String   @id @default(uuid())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId  String
+  
+  // Metrics snapshot
+  date        DateTime @db.Date
+  spend       Float    @default(0)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Float    @default(0)
+  revenue     Float    @default(0)
+  
+  // Calculated metrics
+  ctr         Float    @default(0)  // Click-through rate (%)
+  cpc         Float    @default(0)  // Cost per click
+  roas        Float    @default(0)  // Return on ad spend
+  cpa         Float    @default(0)  // Cost per acquisition
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([campaignId, date])
+  @@index([date])
+  @@index([campaignId, date])
 }
 
 model Event {
