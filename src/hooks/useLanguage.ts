@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { translations, Language } from '@/lib/i18n/translations'
 
 interface LanguageState {
@@ -19,6 +19,18 @@ export const useLanguage = create<LanguageState>()(
     }),
     {
       name: 'emarketer-language',
+      storage: createJSONStorage(() => {
+        // Only use localStorage on client side
+        if (typeof window !== 'undefined') {
+          return localStorage
+        }
+        // Return a dummy storage for SSR
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.t = translations[state.language]
