@@ -94,13 +94,19 @@ export async function POST(request: NextRequest) {
           a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'
         )?.value || 0
 
-        // Estimate revenue (you'll need to adjust this based on your business)
-        const revenue = parseFloat(conversions) * 50 // Assume $50 per conversion
+        // Calculate metrics
+        const conversionsNum = parseFloat(conversions)
+        const revenue = conversionsNum * 50 // Assume $50 per conversion (TODO: make configurable)
         const spend = parseFloat(insights.spend || 0)
+        const impressions = parseInt(insights.impressions || 0)
+        const clicks = parseInt(insights.clicks || 0)
+        const ctr = parseFloat(insights.ctr || 0)
+        const cpc = parseFloat(insights.cpc || 0)
         const roas = spend > 0 ? revenue / spend : 0
+        const cpa = conversionsNum > 0 ? spend / conversionsNum : 0
 
-        // Save to database
-        await prisma.campaign.upsert({
+        // Step 1: Upsert Campaign (master data)
+        const dbCampaign = await prisma.campaign.upsert({
           where: {
             platform_name_userId: {
               platform: 'meta',
@@ -109,33 +115,54 @@ export async function POST(request: NextRequest) {
             }
           },
           update: {
-            campaignId: campaign.id,
+            platformCampaignId: campaign.id,
             status: campaign.status,
-            spend: spend,
-            impressions: parseInt(insights.impressions || 0),
-            clicks: parseInt(insights.clicks || 0),
-            conversions: parseFloat(conversions),
-            revenue: revenue,
-            ctr: parseFloat(insights.ctr || 0),
-            cpc: parseFloat(insights.cpc || 0),
-            roas: roas,
-            date: new Date()
+            integrationId: integration.id,
           },
           create: {
             userId: session.user.id,
+            integrationId: integration.id,
             platform: 'meta',
-            campaignId: campaign.id,
+            platformCampaignId: campaign.id,
             name: campaign.name,
             status: campaign.status,
-            spend: spend,
-            impressions: parseInt(insights.impressions || 0),
-            clicks: parseInt(insights.clicks || 0),
-            conversions: parseFloat(conversions),
-            revenue: revenue,
-            ctr: parseFloat(insights.ctr || 0),
-            cpc: parseFloat(insights.cpc || 0),
-            roas: roas,
-            date: new Date()
+          }
+        })
+
+        // Step 2: Create daily snapshot in CampaignMetric
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Normalize to midnight
+
+        await prisma.campaignMetric.upsert({
+          where: {
+            campaignId_date: {
+              campaignId: dbCampaign.id,
+              date: today
+            }
+          },
+          update: {
+            spend,
+            impressions,
+            clicks,
+            conversions: conversionsNum,
+            revenue,
+            ctr,
+            cpc,
+            roas,
+            cpa,
+          },
+          create: {
+            campaignId: dbCampaign.id,
+            date: today,
+            spend,
+            impressions,
+            clicks,
+            conversions: conversionsNum,
+            revenue,
+            ctr,
+            cpc,
+            roas,
+            cpa,
           }
         })
 
@@ -169,17 +196,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get last sync info
-    const lastCampaign = await prisma.campaign.findFirst({
-      where: {
-        userId: session.user.id,
-        platform: 'meta'
-      },
-      orderBy: {
-        date: 'desc'
-      }
-    })
-
+    // Get campaign count
     const campaignCount = await prisma.campaign.count({
       where: {
         userId: session.user.id,
@@ -187,9 +204,27 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get last metric sync date
+    const lastMetric = await prisma.campaignMetric.findFirst({
+      where: {
+        campaign: {
+          userId: session.user.id,
+          platform: 'meta'
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      select: {
+        date: true,
+        createdAt: true
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      lastSync: lastCampaign?.date || null,
+      lastSync: lastMetric?.createdAt || null,
+      lastMetricDate: lastMetric?.date || null,
       campaignCount
     })
 
