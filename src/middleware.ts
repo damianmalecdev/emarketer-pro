@@ -23,16 +23,14 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/reports/:path*',
-    '/alerts/:path*',
-    '/chat/:path*',
-    '/settings/:path*',
-    '/api/chat/:path*',
-    '/api/reports/:path*',
-    '/api/alerts/:path*',
-    '/api/integrations/:path*',
-    '/api/mock-data/:path*'
-  ],
-  runtime: 'nodejs'
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     * - api/auth (NextAuth routes)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public|api/auth).*)',
+  ]
 }
