@@ -21,16 +21,26 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get campaign data for the period
-    const campaigns = await prisma.campaign.findMany({
+    // Get campaign metrics for the period
+    const metrics = await prisma.campaignMetric.findMany({
       where: {
-        userId: session.user.id,
+        campaign: {
+          userId: session.user.id
+        },
         date: {
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
       },
-      orderBy: { revenue: 'desc' }
+      include: {
+        campaign: {
+          select: {
+            name: true,
+            platform: true
+          }
+        }
+      },
+      orderBy: { date: 'desc' }
     })
 
     // Get alerts for the period
@@ -44,20 +54,52 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Calculate KPIs
-    const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0)
-    const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0)
-    const totalClicks = campaigns.reduce((sum, c) => sum + c.clicks, 0)
-    const totalConversions = campaigns.reduce((sum, c) => sum + c.conversions, 0)
-    const avgCTR = campaigns.length > 0 
-      ? campaigns.reduce((sum, c) => sum + c.ctr, 0) / campaigns.length 
+    // Calculate KPIs from metrics
+    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0)
+    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0)
+    const totalClicks = metrics.reduce((sum, m) => sum + m.clicks, 0)
+    const totalConversions = metrics.reduce((sum, m) => sum + m.conversions, 0)
+    const totalImpressions = metrics.reduce((sum, m) => sum + m.impressions, 0)
+    const avgCTR = metrics.length > 0 
+      ? metrics.reduce((sum, m) => sum + m.ctr, 0) / metrics.length 
       : 0
-    const avgCPC = campaigns.length > 0 
-      ? campaigns.reduce((sum, c) => sum + c.cpc, 0) / campaigns.length 
+    const avgCPC = metrics.length > 0 
+      ? metrics.reduce((sum, m) => sum + m.cpc, 0) / metrics.length 
       : 0
-    const avgROAS = campaigns.length > 0 
-      ? campaigns.reduce((sum, c) => sum + c.roas, 0) / campaigns.length 
+    const avgROAS = metrics.length > 0 
+      ? metrics.reduce((sum, m) => sum + m.roas, 0) / metrics.length 
       : 0
+    const avgCPA = metrics.length > 0 
+      ? metrics.reduce((sum, m) => sum + m.cpa, 0) / metrics.length 
+      : 0
+
+    // Aggregate campaigns from metrics
+    const campaignTotals = metrics.reduce((acc, m) => {
+      const key = `${m.campaign.name}|${m.campaign.platform}`
+      if (!acc[key]) {
+        acc[key] = {
+          name: m.campaign.name,
+          platform: m.campaign.platform,
+          spend: 0,
+          revenue: 0,
+          roas: 0,
+          metricsCount: 0
+        }
+      }
+      acc[key].spend += m.spend
+      acc[key].revenue += m.revenue
+      acc[key].metricsCount++
+      return acc
+    }, {} as Record<string, any>)
+
+    // Calculate ROAS for each campaign
+    const campaigns = Object.values(campaignTotals).map((c: any) => ({
+      name: c.name,
+      platform: c.platform,
+      spend: c.spend,
+      revenue: c.revenue,
+      roas: c.spend > 0 ? c.revenue / c.spend : 0
+    })).sort((a, b) => b.revenue - a.revenue)
 
     // Prepare report data
     const reportData: ReportData = {
@@ -69,9 +111,11 @@ export async function POST(request: NextRequest) {
         totalRevenue,
         totalClicks,
         totalConversions,
+        totalImpressions,
         avgCTR,
         avgCPC,
-        avgROAS
+        avgROAS,
+        avgCPA
       },
       topCampaigns: campaigns.slice(0, 5).map(c => ({
         name: c.name,
