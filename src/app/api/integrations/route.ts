@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/nextAuthOptions'
 import { prisma } from '@/lib/prisma'
+import { integrationSchema, validateInput } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,13 +36,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { platform, accessToken, accountId, accountName } = await request.json()
-
-    if (!platform || !accessToken) {
+    const body = await request.json()
+    
+    // Validate input
+    const validation = validateInput(integrationSchema, body)
+    if (!validation.success) {
       return NextResponse.json({ 
-        error: 'Platform and access token are required' 
+        error: 'Validation failed', 
+        details: validation.errors 
       }, { status: 400 })
     }
+
+    const { platform, accessToken, accountId, accountName } = validation.data!
 
     // Check if integration already exists
     const existingIntegration = await prisma.integration.findFirst({

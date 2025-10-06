@@ -12,9 +12,11 @@ export interface ReportData {
     totalRevenue: number
     totalClicks: number
     totalConversions: number
+    totalImpressions: number
     avgCTR: number
     avgCPC: number
     avgROAS: number
+    avgCPA: number
   }
   topCampaigns: Array<{
     name: string

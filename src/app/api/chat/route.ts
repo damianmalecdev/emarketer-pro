@@ -3,20 +3,54 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/nextAuthOptions'
 import { prisma } from '@/lib/prisma'
 import { generateChatResponse } from '@/lib/openai'
+import { chatMessageSchema, validateInput } from '@/lib/validation'
+import { withRateLimit, chatRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { createErrorResponse, createSuccessResponse, ApiErrors } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  const requestId = crypto.randomUUID()
+  
   try {
+    // Apply rate limiting
+    const rateLimitResponse = withRateLimit(chatRateLimit, 'Too many chat requests')(request)
+    if (rateLimitResponse) {
+      logger.warn('Rate limit exceeded for chat API', { requestId })
+      return rateLimitResponse
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      logger.warn('Unauthorized chat API request', { requestId })
+      return createErrorResponse(ApiErrors.UNAUTHORIZED, requestId)
     }
 
-    const { message } = await request.json()
+    logger.info('Chat API request started', { 
+      userId: session.user.id, 
+      requestId 
+    })
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    const body = await request.json()
+    
+    // Validate input
+    const validation = validateInput(chatMessageSchema, body)
+    if (!validation.success) {
+      logger.warn('Chat API validation failed', { 
+        errors: validation.errors, 
+        userId: session.user.id, 
+        requestId 
+      })
+      return createErrorResponse({
+        message: 'Validation failed',
+        code: 'VALIDATION_ERROR',
+        details: { errors: validation.errors },
+        statusCode: 400
+      }, requestId)
     }
+
+    const { message } = validation.data!
 
     // Ensure user exists in database
     await prisma.user.upsert({
@@ -203,17 +237,23 @@ ${alerts.slice(0, 5).map((a, i) => `${i + 1}. [${a.severity}] ${a.message}`).joi
       }
     })
 
-    return NextResponse.json({ 
-      message: aiResponse,
-      timestamp: new Date().toISOString()
+    const duration = Date.now() - startTime
+    logger.info('Chat API request completed successfully', { 
+      userId: session.user.id, 
+      requestId,
+      duration: `${duration}ms`
     })
 
+    return createSuccessResponse({ 
+      message: aiResponse,
+    }, requestId)
+
   } catch (error) {
-    console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const duration = Date.now() - startTime
+    logger.error('Chat API error', error as Error, { 
+      requestId
+    })
+    return createErrorResponse(ApiErrors.INTERNAL_ERROR, requestId)
   }
 }
 

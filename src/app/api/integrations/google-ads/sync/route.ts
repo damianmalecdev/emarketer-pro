@@ -180,29 +180,36 @@ export async function POST(request: NextRequest) {
         const cpc = clicks > 0 ? spend / clicks : 0
         const cpa = conversions > 0 ? spend / conversions : 0
 
-        // Step 1: Upsert Campaign (master data)
-        const dbCampaign = await prisma.campaign.upsert({
+        // Step 1: Find or create Campaign
+        let dbCampaign = await prisma.campaign.findFirst({
           where: {
-            platform_name_userId: {
-              platform: 'google-ads',
-              name: campaign.name,
-              userId: session.user.id
-            }
-          },
-          update: {
-            platformCampaignId: campaignId,
-            status: campaign.status,
-            integrationId: integration.id,
-          },
-          create: {
-            userId: session.user.id,
-            integrationId: integration.id,
             platform: 'google-ads',
-            platformCampaignId: campaignId,
             name: campaign.name,
-            status: campaign.status,
+            userId: session.user.id
           }
         })
+
+        if (!dbCampaign) {
+          dbCampaign = await prisma.campaign.create({
+            data: {
+              userId: session.user.id,
+              integrationId: integration.id,
+              platform: 'google-ads',
+              platformCampaignId: campaignId,
+              name: campaign.name,
+              status: campaign.status,
+            }
+          })
+        } else {
+          dbCampaign = await prisma.campaign.update({
+            where: { id: dbCampaign.id },
+            data: {
+              platformCampaignId: campaignId,
+              status: campaign.status,
+              integrationId: integration.id,
+            }
+          })
+        }
 
         // Step 2: Create daily snapshot in CampaignMetric
         const today = new Date()

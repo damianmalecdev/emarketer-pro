@@ -40,29 +40,36 @@ export async function loadCampaignWithMetrics(
   config: LoadConfig
 ): Promise<{ success: boolean; campaignId?: string; error?: string }> {
   try {
-    // Step 1: Upsert Campaign (master data)
-    const dbCampaign = await prisma.campaign.upsert({
+    // Step 1: Find or create Campaign
+    let dbCampaign = await prisma.campaign.findFirst({
       where: {
-        platform_name_userId: {
-          platform: campaign.platform,
-          name: campaign.name,
-          userId: config.userId,
-        },
-      },
-      update: {
-        platformCampaignId: campaign.platformCampaignId,
-        status: campaign.status,
-        integrationId: config.integrationId,
-      },
-      create: {
-        userId: config.userId,
-        integrationId: config.integrationId,
         platform: campaign.platform,
-        platformCampaignId: campaign.platformCampaignId,
         name: campaign.name,
-        status: campaign.status,
-      },
+        userId: config.userId,
+      }
     })
+
+    if (!dbCampaign) {
+      dbCampaign = await prisma.campaign.create({
+        data: {
+          userId: config.userId,
+          integrationId: config.integrationId,
+          platform: campaign.platform,
+          platformCampaignId: campaign.platformCampaignId,
+          name: campaign.name,
+          status: campaign.status,
+        }
+      })
+    } else {
+      dbCampaign = await prisma.campaign.update({
+        where: { id: dbCampaign.id },
+        data: {
+          platformCampaignId: campaign.platformCampaignId,
+          status: campaign.status,
+          integrationId: config.integrationId,
+        }
+      })
+    }
 
     // Step 2: Normalize date to midnight
     const normalizedDate = new Date(metrics.date)
