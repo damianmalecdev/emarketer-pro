@@ -160,28 +160,36 @@ async function syncMetaIntegration(integration: any) {
       const cpa = conversionsNum > 0 ? spend / conversionsNum : 0
 
       // Step 1: Upsert Campaign (master data)
-      const dbCampaign = await prisma.campaign.upsert({
+      // Step 1: Find or create Campaign
+      let dbCampaign = await prisma.campaign.findFirst({
         where: {
-          platform_name_userId: {
-            platform: 'meta',
-            name: campaign.name,
-            userId: integration.userId
-          }
-        },
-        update: {
-          platformCampaignId: campaign.id,
-          status: campaign.status,
-          integrationId: integration.id,
-        },
-        create: {
-          userId: integration.userId,
-          integrationId: integration.id,
           platform: 'meta',
-          platformCampaignId: campaign.id,
           name: campaign.name,
-          status: campaign.status,
+          userId: integration.userId
         }
       })
+
+      if (!dbCampaign) {
+        dbCampaign = await prisma.campaign.create({
+          data: {
+            userId: integration.userId,
+            integrationId: integration.id,
+            platform: 'meta',
+            platformCampaignId: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+          }
+        })
+      } else {
+        dbCampaign = await prisma.campaign.update({
+          where: { id: dbCampaign.id },
+          data: {
+            platformCampaignId: campaign.id,
+            status: campaign.status,
+            integrationId: integration.id,
+          }
+        })
+      }
 
       // Step 2: Create daily snapshot
       const today = new Date()
@@ -349,28 +357,36 @@ async function syncGoogleAdsIntegration(integration: any) {
       const cpa = conversions > 0 ? spend / conversions : 0
 
       // Step 1: Upsert Campaign (master data)
-      const dbCampaign = await prisma.campaign.upsert({
+      // Find or create Campaign
+      let dbCampaign = await prisma.campaign.findFirst({
         where: {
-          platform_name_userId: {
-            platform: 'google-ads',
-            name: campaign.name,
-            userId: integration.userId
-          }
-        },
-        update: {
-          platformCampaignId: campaignId,
-          status: campaign.status,
-          integrationId: integration.id,
-        },
-        create: {
-          userId: integration.userId,
-          integrationId: integration.id,
           platform: 'google-ads',
-          platformCampaignId: campaignId,
           name: campaign.name,
-          status: campaign.status,
+          userId: integration.userId
         }
       })
+
+      if (!dbCampaign) {
+        dbCampaign = await prisma.campaign.create({
+          data: {
+            userId: integration.userId,
+            integrationId: integration.id,
+            platform: 'google-ads',
+            platformCampaignId: campaignId,
+            name: campaign.name,
+            status: campaign.status,
+          }
+        })
+      } else {
+        dbCampaign = await prisma.campaign.update({
+          where: { id: dbCampaign.id },
+          data: {
+            platformCampaignId: campaignId,
+            status: campaign.status,
+            integrationId: integration.id,
+          }
+        })
+      }
 
       // Step 2: Create daily snapshot
       const today = new Date()

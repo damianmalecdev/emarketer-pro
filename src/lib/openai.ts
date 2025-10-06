@@ -38,7 +38,7 @@ Be helpful, accurate, and insightful!`
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [systemMessage, ...messages],
+      messages: [systemMessage, ...messages] as any,
       max_tokens: 1000,
       temperature: 0.7,
     })

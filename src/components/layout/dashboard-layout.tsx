@@ -91,7 +91,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={item.href as any}
                     className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900"
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -117,7 +117,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               return (
                 <Link
                   key={item.name}
-                  href={item.href}
+                  href={item.href as any}
                   className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900"
                 >
                   <Icon className="mr-3 h-5 w-5" />
