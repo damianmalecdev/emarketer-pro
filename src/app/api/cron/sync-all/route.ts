@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
         isActive: true,
         OR: [
           { platform: 'meta' },
-          { platform: 'google-ads' }
+          { platform: 'google-ads' },
+          { platform: 'ga4' }
         ]
       },
       include: {
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
           await syncMetaIntegration(integration)
         } else if (integration.platform === 'google-ads') {
           await syncGoogleAdsIntegration(integration)
+        } else if (integration.platform === 'ga4') {
+          await syncGa4Integration(integration)
         }
 
         results.success++
@@ -401,5 +404,105 @@ async function syncGoogleAdsIntegration(integration: any) {
   }
 
   return { campaigns: totalCampaigns }
+}
+
+// Helper function to sync GA4 integration (stores events)
+async function syncGa4Integration(integration: any) {
+  let accessToken = integration.accessToken
+
+  if (integration.refreshToken && integration.expiresAt && new Date() > integration.expiresAt) {
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        refresh_token: integration.refreshToken,
+        grant_type: 'refresh_token'
+      })
+    })
+
+    if (refreshResponse.ok) {
+      const refreshData = await refreshResponse.json()
+      accessToken = refreshData.access_token
+
+      await prisma.integration.update({
+        where: { id: integration.id },
+        data: {
+          accessToken: refreshData.access_token,
+          expiresAt: refreshData.expires_in 
+            ? new Date(Date.now() + refreshData.expires_in * 1000)
+            : null
+        }
+      })
+    }
+  }
+
+  const propertyId = integration.accountId || 'default'
+
+  const reportResponse = await fetch(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        dimensions: [
+          { name: 'date' },
+          { name: 'eventName' },
+          { name: 'sessionSource' },
+          { name: 'sessionMedium' },
+          { name: 'sessionCampaignName' }
+        ],
+        metrics: [
+          { name: 'eventCount' },
+          { name: 'sessions' },
+          { name: 'totalUsers' },
+          { name: 'eventValue' }
+        ],
+        limit: 1000
+      })
+    }
+  )
+
+  if (!reportResponse.ok) {
+    const error = await reportResponse.text()
+    throw new Error(`GA4 Data API error: ${error}`)
+  }
+
+  const reportData = await reportResponse.json()
+  const rows = reportData.rows || []
+
+  for (const row of rows) {
+    const dimensions = row.dimensionValues || []
+    const metrics = row.metricValues || []
+
+    const eventDate = dimensions[0]?.value || new Date().toISOString().split('T')[0]
+    const eventName = dimensions[1]?.value || 'unknown'
+    const source = dimensions[2]?.value || '(direct)'
+    const medium = dimensions[3]?.value || '(none)'
+    const campaignName = dimensions[4]?.value || '(not set)'
+
+    const eventCount = parseInt(metrics[0]?.value || '0', 10)
+    const sessions = parseInt(metrics[1]?.value || '0', 10)
+    const users = parseInt(metrics[2]?.value || '0', 10)
+    const eventValue = parseFloat(metrics[3]?.value || '0')
+
+    const eventTime = new Date(eventDate)
+
+    await prisma.event.create({
+      data: {
+        userId: integration.userId,
+        eventName,
+        eventValue,
+        eventTime,
+        source: 'ga4',
+        eventParams: { source, medium, campaignName, eventCount, sessions, users }
+      }
+    })
+  }
 }
 

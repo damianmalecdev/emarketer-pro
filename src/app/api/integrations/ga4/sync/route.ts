@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          client_id: process.env.GA4_CLIENT_ID || process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GA4_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET!,
           refresh_token: integration.refreshToken,
           grant_type: 'refresh_token'
         })

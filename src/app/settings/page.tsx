@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const { t } = useLanguage()
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+  const [isRunningGlobalSync, setIsRunningGlobalSync] = useState(false)
 
   const { data: integrations = [] } = useQuery<Integration[]>({
     queryKey: ['integrations'],
@@ -236,6 +237,31 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error disconnecting GA4:', error)
+    }
+  }
+
+  const handleRunGlobalSync = async () => {
+    try {
+      setIsRunningGlobalSync(true)
+      setSyncMessage('Running global sync for all integrations...')
+      const res = await fetch('/api/cron/run', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ''}`
+        }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncMessage('✅ Global sync finished.')
+      } else {
+        setSyncMessage(`❌ ${data.error || 'Global sync failed'}`)
+      }
+      setTimeout(() => setSyncMessage(''), 6000)
+    } catch (e) {
+      setSyncMessage('❌ Global sync failed: ' + String(e))
+      setTimeout(() => setSyncMessage(''), 8000)
+    } finally {
+      setIsRunningGlobalSync(false)
     }
   }
 
@@ -559,6 +585,10 @@ export default function SettingsPage() {
                 <Button variant="outline" className="w-full justify-start">
                   <Shield className="mr-2 h-4 w-4" />
                   Privacy Settings
+                </Button>
+                <Button variant="default" className="w-full justify-start" onClick={handleRunGlobalSync} disabled={isRunningGlobalSync}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {isRunningGlobalSync ? 'Running Global Sync...' : 'Run Global Sync'}
                 </Button>
               </CardContent>
             </Card>

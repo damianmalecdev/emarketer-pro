@@ -92,7 +92,7 @@ npx prisma db push
 ## KROK 8: Zasiej dane testowe
 
 ```bash
-npm run db:seed
+ai
 ```
 
 ---

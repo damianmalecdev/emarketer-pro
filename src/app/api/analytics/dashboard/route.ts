@@ -14,18 +14,51 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get('days') || '30')
 
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
+    // Optional explicit date range
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+    const startDate = startDateParam ? new Date(startDateParam) : new Date()
+    const endDate = endDateParam ? new Date(endDateParam) : new Date()
+
+    if (!startDateParam) {
+      startDate.setDate(startDate.getDate() - days)
+    }
     startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    // Optional account filters per platform
+    const googleAccountId = searchParams.get('googleAccountId') || undefined
+    const metaAccountId = searchParams.get('metaAccountId') || undefined
+    const ga4AccountId = searchParams.get('ga4AccountId') || undefined
+    const platformParam = searchParams.get('platform') || undefined
 
     // Get all metrics for the period
     const metrics = await prisma.campaignMetric.findMany({
       where: {
         campaign: {
-          userId: session.user.id
+          userId: session.user.id,
+          ...(platformParam ? { platform: platformParam } : {}),
+          ...(googleAccountId || metaAccountId || ga4AccountId
+            ? {
+                integration: {
+                  OR: [
+                    ...(googleAccountId
+                      ? [{ platform: 'google', accountId: googleAccountId }]
+                      : []),
+                    ...(metaAccountId
+                      ? [{ platform: 'meta', accountId: metaAccountId }]
+                      : []),
+                    ...(ga4AccountId
+                      ? [{ platform: 'ga4', accountId: ga4AccountId }]
+                      : []),
+                  ],
+                },
+              }
+            : {}),
         },
         date: {
-          gte: startDate
+          gte: startDate,
+          lte: endDate,
         }
       },
       include: {

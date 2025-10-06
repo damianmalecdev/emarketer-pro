@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -44,6 +44,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { t } = useLanguage()
+  const pathname = usePathname()
 
   const navigation = [
     { name: t.nav.dashboard, href: '/dashboard', icon: Home },
@@ -199,6 +200,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            </div>
+          </div>
+          {/* Platform sub-navigation */}
+          <div className="px-4 pb-3 border-t border-gray-200">
+            <div className="flex gap-2">
+              <Link
+                href="/dashboard/google-ads"
+                className={`px-3 py-1.5 text-sm rounded-md ${pathname.startsWith('/dashboard/google-ads') ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+              >
+                Google Ads
+              </Link>
+              <Link
+                href="/dashboard/meta"
+                className={`px-3 py-1.5 text-sm rounded-md ${pathname.startsWith('/dashboard/meta') ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+              >
+                Meta
+              </Link>
+              <Link
+                href="/dashboard/ga4"
+                className={`px-3 py-1.5 text-sm rounded-md ${pathname.startsWith('/dashboard/ga4') ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+              >
+                GA4
+              </Link>
             </div>
           </div>
         </div>

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       const state = session.user.id
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
+        `client_id=${process.env.GA4_CLIENT_ID || process.env.GOOGLE_CLIENT_ID}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
         `scope=${encodeURIComponent(scope)}&` +
         `state=${state}&` +
