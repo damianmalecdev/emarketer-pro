@@ -150,8 +150,19 @@ model Event {
   eventName  String
   eventValue Float?
   eventTime  DateTime
-  source     String
+  source     String    @default("ga4")
+  
+  // GA4 specific fields
+  sessionId       String?
+  userPseudoId    String?
+  eventParams     Json?
+  userProperties  Json?
+  
   createdAt  DateTime  @default(now())
+  
+  @@index([userId, eventTime])
+  @@index([eventName, eventTime])
+  @@index([source, eventTime])
 }
 
 model Alert {

@@ -178,6 +178,66 @@ export default function SettingsPage() {
     }
   }
 
+  // GA4 handlers
+  const handleConnectGA4 = async () => {
+    try {
+      const response = await fetch('/api/integrations/ga4', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'auth-url' })
+      })
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      }
+    } catch (error) {
+      console.error('Error connecting GA4:', error)
+    }
+  }
+
+  const handleSyncGA4 = async () => {
+    try {
+      setIsSyncing(true)
+      setSyncMessage('Syncing data from Google Analytics 4...')
+
+      const response = await fetch('/api/integrations/ga4/sync', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSyncMessage(`✅ Successfully synced ${data.events} events from GA4!`)
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        setSyncMessage(`❌ ${data.error || 'Sync failed'}`)
+        setTimeout(() => setSyncMessage(''), 8000)
+      }
+    } catch (error) {
+      console.error('Error syncing GA4:', error)
+      setSyncMessage('❌ Sync failed: ' + String(error))
+      setTimeout(() => setSyncMessage(''), 8000)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleDisconnectGA4 = async () => {
+    try {
+      const existingIntegration = integrations.find(i => i.platform === 'ga4' && i.isActive)
+      if (existingIntegration) {
+        await fetch(`/api/integrations?id=${existingIntegration.id}`, {
+          method: 'DELETE'
+        })
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Error disconnecting GA4:', error)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -299,18 +359,46 @@ export default function SettingsPage() {
                 </div>
 
                 {/* GA4 */}
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">GA</span>
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold">GA</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{t.settings.platforms.ga4.name}</h3>
+                        <p className="text-sm text-gray-600">{t.settings.platforms.ga4.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">{t.settings.platforms.ga4.name}</h3>
-                      <p className="text-sm text-gray-600">{t.settings.platforms.ga4.description}</p>
+                    <div className="flex items-center space-x-2">
+                      {integrations.find(i => i.platform === 'ga4' && i.isActive) ? (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {t.settings.connected}
+                          </Badge>
+                          <Button 
+                            onClick={handleSyncGA4} 
+                            size="sm" 
+                            variant="outline"
+                            disabled={isSyncing}
+                          >
+                            {isSyncing ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                            <span className="ml-2">{isSyncing ? t.settings.syncing : t.settings.syncData}</span>
+                          </Button>
+                          <Button onClick={handleDisconnectGA4} size="sm" variant="destructive">
+                            {t.settings.disconnect}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button onClick={handleConnectGA4} size="sm">
+                          {t.settings.connect}
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">Coming Soon</Badge>
                   </div>
                 </div>
               </CardContent>
