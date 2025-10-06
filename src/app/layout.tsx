@@ -5,6 +5,8 @@ import { Providers } from '@/components/providers'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'eMarketer.pro - AI-Powered Marketing Analytics',
   description: 'Intelligent marketing assistant for e-commerce and digital marketing professionals',
