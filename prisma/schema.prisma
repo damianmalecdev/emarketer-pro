@@ -1,0 +1,273 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTHENTICATION MODELS (NextAuth.js)
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  password      String?       // bcrypt hashed
+  plan          String        @default("free")  // 'free' | 'pro' | 'enterprise'
+  role          String        @default("user")  // 'admin' | 'manager' | 'viewer'
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]  // Multi-tenant access
+  alerts        Alert[]
+  messages      ChatMessage[]
+  preferences   UserPreference[]
+  reports       Report[]
+}
+
+model Company {
+  id           String          @id @default(uuid())
+  name         String
+  domain       String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  
+  members      Membership[]
+  integrations Integration[]
+  campaigns    Campaign[]
+  events       Event[]
+  reports      Report[]
+}
+
+model Membership {
+  id         String   @id @default(uuid())
+  userId     String
+  companyId  String
+  role       String   @default("owner")  // 'owner' | 'manager' | 'analyst'
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+}
+
+// ============================================
+// INTEGRATION & CAMPAIGN MODELS
+// ============================================
+
+model Integration {
+  id              String     @id @default(uuid())
+  company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       String
+  platform        String     // 'google-ads' | 'meta' | 'tiktok' | 'ga4'
+  accessToken     String?
+  refreshToken    String?
+  expiresAt       DateTime?
+  accountId       String?
+  accountName     String?
+  currency        String?    @default("USD")
+  isActive        Boolean    @default(true)
+  
+  // Google Ads specific
+  loginCustomerId String?
+  customerIds     Json?      // Array of accessible customer IDs
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  campaigns       Campaign[]
+
+  @@unique([companyId, platform, accountId])
+}
+
+model Campaign {
+  id                 String            @id @default(uuid())
+  company            Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId          String
+  integration        Integration?      @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  integrationId      String?
+  name               String
+  platform           String
+  platformCampaignId String  // ID from platform API
+  status             String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  
+  events             Event[]
+  metrics            CampaignMetric[]  // Time-series metrics
+  anomalies          AnomalyDetection[]
+
+  @@index([companyId, platform])
+  @@index([platform])
+  @@index([platformCampaignId])
+}
+
+// Time-series metrics table (daily snapshots)
+model CampaignMetric {
+  id          String   @id @default(uuid())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId  String
+  
+  date        DateTime
+  spend       Float    @default(0)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Float    @default(0)
+  revenue     Float    @default(0)
+  
+  // Calculated metrics
+  ctr         Float    @default(0)  // Click-through rate (%)
+  cpc         Float    @default(0)  // Cost per click
+  roas        Float    @default(0)  // Return on ad spend
+  cpa         Float    @default(0)  // Cost per acquisition
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([campaignId, date])
+  @@index([date])
+  @@index([campaignId, date])
+}
+
+model Event {
+  id         String    @id @default(uuid())
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId  String
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignId String?
+  eventName  String
+  eventValue Float?
+  eventTime  DateTime
+  source     String    @default("ga4")
+  
+  // GA4 specific
+  sessionId       String?
+  userPseudoId    String?
+  eventParams     Json?
+  userProperties  Json?
+  
+  createdAt  DateTime  @default(now())
+  
+  @@index([companyId, eventTime])
+  @@index([eventName, eventTime])
+  @@index([source, eventTime])
+}
+
+// ============================================
+// AI & REPORTING MODELS
+// ============================================
+
+model Alert {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  message   String
+  type      String   // 'anomaly' | 'performance' | 'budget' | 'opportunity'
+  severity  String   // 'low' | 'medium' | 'high' | 'critical'
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String
+  type      String   // 'weekly' | 'monthly' | 'custom'
+  period    String
+  summary   String
+  aiComment String?
+  fileUrl   String?
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      String   // 'user' | 'assistant' | 'system'
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model UserPreference {
+  id                String   @id @default(uuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  platform          String   // 'google-ads' | 'meta' | 'ga4' | 'tiktok'
+  selectedAccountId String?
+  currency          String?  // ISO currency override
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, platform])
+}
+
+model AnomalyDetection {
+  id            String     @id @default(uuid())
+  campaign      Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignId    String?
+  metricType    String     // 'spend' | 'roas' | 'ctr' | 'conversions'
+  previousValue Float
+  currentValue  Float
+  deviation     Float      // Percentage deviation
+  threshold     Float
+  direction     String     // 'increase' | 'decrease'
+  detectedAt    DateTime   @default(now())
+  isCritical    Boolean    @default(false)
+  resolved      Boolean    @default(false)
+}
+
