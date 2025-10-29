@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       `client_id=${appId}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&state=${encodeURIComponent(state)}` +
-      `&scope=ads_read,ads_management,business_management`
+      `&scope=public_profile,email`
 
     return NextResponse.json({ authUrl })
   }
