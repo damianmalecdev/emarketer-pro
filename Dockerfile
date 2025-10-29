@@ -36,7 +36,8 @@ EXPOSE 3000
 # Copy production node_modules and build artifacts
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
+# Some projects may not have a public directory; create an empty one to satisfy Next.js
+RUN mkdir -p ./public
 COPY --from=build /app/package.json ./package.json
 
 # If Prisma is used at runtime, include generated client
