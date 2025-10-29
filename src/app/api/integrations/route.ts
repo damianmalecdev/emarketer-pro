@@ -58,10 +58,8 @@ export async function GET(req: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined
     })
-    return NextResponse.json(
-      { error: 'Failed to fetch integrations' },
-      { status: 500 }
-    )
+    // Fail-soft to avoid breaking the settings page UI
+    return NextResponse.json({ integrations: [] })
   }
 }
 

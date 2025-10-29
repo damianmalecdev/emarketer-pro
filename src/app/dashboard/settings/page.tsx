@@ -44,10 +44,16 @@ export default function Settings() {
   const fetchIntegrations = async () => {
     try {
       const res = await fetch('/api/integrations')
+      if (!res.ok) {
+        console.warn('Integrations fetch not OK:', res.status)
+        setIntegrations([])
+        return
+      }
       const data = await res.json()
       setIntegrations(data.integrations || [])
     } catch (error) {
       console.error('Error fetching integrations:', error)
+      setIntegrations([])
     } finally {
       setLoading(false)
     }
