@@ -12,15 +12,10 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  // Disable prepared statements for Supabase compatibility
-  __internal: {
-    engine: {
-      preparedStatements: false,
-    },
-  },
 })
 
-if (process.env.NODE_ENV !== 'production') {
+// Always save to global to prevent multiple instances in production
+if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma
 }
 
