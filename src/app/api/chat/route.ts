@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getChatCompletion } from '@/lib/openai'
 import { prisma } from '@/lib/prisma'
+import { validateCompanyAccess } from '@/lib/permissions'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -22,6 +23,18 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Validate company access if companyId is provided
+    if (companyId) {
+      try {
+        await validateCompanyAccess(user.id, companyId)
+      } catch (error) {
+        return NextResponse.json(
+          { error: 'Access denied to company' },
+          { status: 403 }
+        )
+      }
+    }
+
     // Build context from user's data
     const context = await buildMarketingContext(user.id, companyId)
 
