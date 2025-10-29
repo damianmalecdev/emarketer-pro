@@ -29,7 +29,15 @@ export async function GET(req: NextRequest) {
 
   try {
     // Parse state
-    const state = JSON.parse(stateStr)
+    let state: { userId: string; companyId: string }
+    try {
+      state = JSON.parse(stateStr)
+    } catch (e) {
+      console.error('Invalid state JSON from Meta callback:', stateStr)
+      return NextResponse.redirect(
+        new URL('/dashboard/settings?error=invalid_state', baseUrl)
+      )
+    }
     const { userId, companyId } = state
 
     // Validate company access
@@ -59,8 +67,15 @@ export async function GET(req: NextRequest) {
     const tokenResponse = await fetch(tokenUrl)
     const tokenData = await tokenResponse.json()
 
-    if (!tokenData.access_token) {
-      throw new Error('No access token received')
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      console.error('Meta token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        body: tokenData
+      })
+      return NextResponse.redirect(
+        new URL('/dashboard/settings?error=meta_token_exchange', baseUrl)
+      )
     }
 
     // Get long-lived token
@@ -72,6 +87,13 @@ export async function GET(req: NextRequest) {
 
     const longLivedResponse = await fetch(longLivedUrl)
     const longLivedData = await longLivedResponse.json()
+    if (!longLivedResponse.ok && !longLivedData.access_token) {
+      console.error('Meta long-lived token exchange failed:', {
+        status: longLivedResponse.status,
+        statusText: longLivedResponse.statusText,
+        body: longLivedData
+      })
+    }
 
     const accessToken = longLivedData.access_token || tokenData.access_token
     const expiresIn = longLivedData.expires_in || tokenData.expires_in
@@ -83,6 +105,16 @@ export async function GET(req: NextRequest) {
 
     const accountsResponse = await fetch(accountsUrl)
     const accountsData = await accountsResponse.json()
+    if (!accountsResponse.ok) {
+      console.error('Meta fetch ad accounts failed:', {
+        status: accountsResponse.status,
+        statusText: accountsResponse.statusText,
+        body: accountsData
+      })
+      return NextResponse.redirect(
+        new URL('/dashboard/settings?error=meta_accounts_fetch', baseUrl)
+      )
+    }
 
     if (!accountsData.data || accountsData.data.length === 0) {
       return NextResponse.redirect(
@@ -158,7 +190,7 @@ export async function GET(req: NextRequest) {
       new URL('/dashboard/settings?success=meta_connected', baseUrl)
     )
   } catch (error) {
-    console.error('Meta callback error:', error)
+    console.error('Meta callback error (unexpected):', error)
     return NextResponse.redirect(
       new URL('/dashboard/settings?error=oauth_failed', baseUrl)
     )
