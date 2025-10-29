@@ -11,13 +11,17 @@ export async function GET(req: NextRequest) {
   // Use NEXTAUTH_URL from env for production redirects
   const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || 'https://emarketer.pro'
 
+  console.log('Meta callback received:', { code: !!code, state: !!stateStr, error })
+
   if (error) {
+    console.error('Meta OAuth error:', error)
     return NextResponse.redirect(
       new URL(`/dashboard/settings?error=oauth_${error}`, baseUrl)
     )
   }
 
   if (!code || !stateStr) {
+    console.error('Missing code or state:', { hasCode: !!code, hasState: !!stateStr })
     return NextResponse.redirect(
       new URL('/dashboard/settings?error=oauth_failed', baseUrl)
     )
