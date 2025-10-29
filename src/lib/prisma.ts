@@ -14,8 +14,11 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   },
 })
 
-// Always save to global to prevent multiple instances in production
-if (!globalForPrisma.prisma) {
+// Force cleanup on hot reload in development
+if (process.env.NODE_ENV === 'development') {
+  globalForPrisma.prisma = prisma
+} else {
+  // In production, also cache to prevent duplicate instances
   globalForPrisma.prisma = prisma
 }
 
