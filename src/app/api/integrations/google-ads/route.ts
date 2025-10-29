@@ -23,10 +23,15 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'auth-url') {
+    const baseUrl =
+      process.env.NEXTAUTH_URL ||
+      process.env.APP_URL ||
+      new URL(req.url).origin
+
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ADS_CLIENT_ID,
       process.env.GOOGLE_ADS_CLIENT_SECRET,
-      `${process.env.NEXTAUTH_URL}/api/integrations/google-ads/callback`
+      `${baseUrl}/api/integrations/google-ads/callback`
     )
 
     // CRITICAL: State MUST contain userId and companyId

@@ -49,10 +49,14 @@ export async function GET(req: NextRequest) {
 
     // Exchange code for tokens
     console.log('🔍 Creating OAuth2 client...')
+    const baseUrl =
+      process.env.NEXTAUTH_URL ||
+      process.env.APP_URL ||
+      new URL(req.url).origin
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ADS_CLIENT_ID,
       process.env.GOOGLE_ADS_CLIENT_SECRET,
-      `${process.env.NEXTAUTH_URL}/api/integrations/google-ads/callback`
+      `${baseUrl}/api/integrations/google-ads/callback`
     )
 
     console.log('🔍 Exchanging code for tokens...')
