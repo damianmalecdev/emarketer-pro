@@ -85,6 +85,7 @@ model Company {
   campaigns    Campaign[]
   events       Event[]
   reports      Report[]
+  metaAccounts MetaAdsAccount[]
   
 }
 
@@ -449,5 +450,31 @@ model GoogleAdsMetricsMonthly {
   @@unique([entityType, customerId, year, month])
   @@index([entityType, customerId])
   @@index([year, month])
+}
+
+// ============================================
+// META ADS MODELS
+// ============================================
+
+model MetaAdsAccount {
+  id                    String   @id @default(cuid())
+  companyId             String
+  accountId             String
+  name                  String
+  accountStatus         Int
+  currency              String
+  timezone              String
+  accountType           String
+  businessManagerIdRef  String?
+  accessToken           String?
+  tokenExpiresAt        DateTime?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, accountId])
+  @@index([companyId])
 }
 
