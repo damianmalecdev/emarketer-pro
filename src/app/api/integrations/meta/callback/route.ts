@@ -7,16 +7,19 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code')
   const stateStr = searchParams.get('state')
   const error = searchParams.get('error')
+  
+  // Use NEXTAUTH_URL from env for production redirects
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || 'https://emarketer.pro'
 
   if (error) {
     return NextResponse.redirect(
-      new URL(`/dashboard/settings?error=oauth_${error}`, req.url)
+      new URL(`/dashboard/settings?error=oauth_${error}`, baseUrl)
     )
   }
 
   if (!code || !stateStr) {
     return NextResponse.redirect(
-      new URL('/dashboard/settings?error=oauth_failed', req.url)
+      new URL('/dashboard/settings?error=oauth_failed', baseUrl)
     )
   }
 
@@ -34,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     if (!membership) {
       return NextResponse.redirect(
-        new URL('/dashboard/settings?error=access_denied', req.url)
+        new URL('/dashboard/settings?error=access_denied', baseUrl)
       )
     }
 
@@ -79,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     if (!accountsData.data || accountsData.data.length === 0) {
       return NextResponse.redirect(
-        new URL('/dashboard/settings?error=no_ad_accounts', req.url)
+        new URL('/dashboard/settings?error=no_ad_accounts', baseUrl)
       )
     }
 
@@ -148,12 +151,12 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.redirect(
-      new URL('/dashboard/settings?success=meta_connected', req.url)
+      new URL('/dashboard/settings?success=meta_connected', baseUrl)
     )
   } catch (error) {
     console.error('Meta callback error:', error)
     return NextResponse.redirect(
-      new URL('/dashboard/settings?error=oauth_failed', req.url)
+      new URL('/dashboard/settings?error=oauth_failed', baseUrl)
     )
   }
 }
