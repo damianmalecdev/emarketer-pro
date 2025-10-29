@@ -1,5 +1,6 @@
 // src/app/auth/signin/page.tsx
 import { SignInButton } from '@/components/auth/SignInButton'
+import EmailSignInForm from '@/components/auth/EmailSignInForm'
 
 export default function SignInPage() {
   return (
@@ -16,6 +17,17 @@ export default function SignInPage() {
         </div>
         
         <div className="mt-8 space-y-6">
+          <EmailSignInForm />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-gray-50 px-2 text-gray-500">or</span>
+            </div>
+          </div>
+
           <SignInButton />
           
           <div className="text-center">
