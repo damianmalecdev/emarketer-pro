@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -85,6 +85,7 @@ model Company {
   campaigns    Campaign[]
   events       Event[]
   reports      Report[]
+  
 }
 
 model Membership {
@@ -93,6 +94,7 @@ model Membership {
   companyId  String
   role       String   @default("owner")  // 'owner' | 'manager' | 'analyst'
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -269,5 +271,183 @@ model AnomalyDetection {
   detectedAt    DateTime   @default(now())
   isCritical    Boolean    @default(false)
   resolved      Boolean    @default(false)
+}
+
+// ============================================
+// GOOGLE ADS MODELS
+// ============================================
+
+model GoogleAdsCustomer {
+  id                String   @id @default(cuid())
+  customerId        String   @unique
+  descriptiveName   String?
+  currencyCode      String?
+  timeZone          String?
+  manager           Boolean  @default(false)
+  testAccount       Boolean  @default(false)
+  payPerConversion  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  campaigns         GoogleAdsCampaign[]
+
+  @@index([customerId])
+}
+
+model GoogleAdsCampaign {
+  id                String   @id @default(cuid())
+  customerId        String
+  campaignId        String   @unique
+  name              String
+  status            String
+  type              String
+  advertisingChannelType String
+  advertisingChannelSubType String?
+  budget            Decimal?
+  budgetType        String?
+  startDate         DateTime?
+  endDate           DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  customer          GoogleAdsCustomer     @relation(fields: [customerId], references: [customerId], onDelete: Cascade)
+  adGroups          GoogleAdsAdGroup[]
+
+  @@unique([customerId, campaignId])
+  @@index([customerId])
+}
+
+model GoogleAdsAdGroup {
+  id                String   @id @default(cuid())
+  campaignId        String
+  adGroupId         String   @unique
+  name              String
+  status            String
+  type              String
+  cpcBidMicros      Decimal?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  campaign          GoogleAdsCampaign     @relation(fields: [campaignId], references: [campaignId], onDelete: Cascade)
+
+  @@unique([campaignId, adGroupId])
+  @@index([campaignId])
+}
+
+model GoogleAdsAd {
+  id                String   @id @default(cuid())
+  adGroupId         String
+  adId              String   @unique
+  type              String
+  status            String
+  finalUrls         String[]
+  headlines         String[]
+  descriptions      String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([adGroupId, adId])
+  @@index([adGroupId])
+}
+
+model GoogleAdsKeyword {
+  id                String   @id @default(cuid())
+  adGroupId         String
+  keywordId         String   @unique
+  text              String
+  matchType         String
+  status            String
+  cpcBidMicros      Decimal?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([adGroupId, keywordId])
+  @@index([adGroupId])
+}
+
+model GoogleAdsMetrics {
+  id                String   @id @default(cuid())
+  entityType        String
+  entityId          String
+  date              DateTime
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  costMicros        Decimal  @default(0)
+  conversions       Decimal  @default(0)
+  conversionValue   Decimal  @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([entityType, entityId, date])
+  @@index([entityType, entityId])
+  @@index([date])
+}
+
+model GoogleAdsSyncLog {
+  id                String   @id @default(cuid())
+  customerId        String
+  syncType          String
+  entityType        String?
+  status            String
+  startedAt         DateTime
+  completedAt       DateTime?
+  duration          Int?
+  recordsProcessed  Int?
+  recordsCreated    Int?
+  recordsUpdated    Int?
+  error             String?
+  errorDetails      Json?
+  triggeredBy       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model GoogleAdsMetricsHourly {
+  id                String   @id @default(cuid())
+  entityType        String
+  customerId        String
+  campaignId        String?
+  adGroupId         String?
+  adId              String?
+  keywordId         String?
+  timestamp         DateTime
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  cost              Decimal  @default(0)
+  conversions       Decimal  @default(0)
+  conversionValue   Decimal  @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([entityType, customerId, timestamp])
+  @@index([entityType, customerId])
+  @@index([timestamp])
+}
+
+model GoogleAdsMetricsMonthly {
+  id                String   @id @default(cuid())
+  entityType        String
+  customerId        String
+  campaignId        String?
+  adGroupId         String?
+  adId              String?
+  keywordId         String?
+  year              Int
+  month             Int
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  cost              Decimal  @default(0)
+  conversions       Decimal  @default(0)
+  conversionValue   Decimal  @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([entityType, customerId, year, month])
+  @@index([entityType, customerId])
+  @@index([year, month])
 }
 

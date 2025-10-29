@@ -1,13 +1,14 @@
 // src/app/api/integrations/meta/sync/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/nextAuthOptions'
+import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { validateCompanyAccess } from '@/lib/permissions'
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Validate access
-  await validateCompanyAccess(session.user.id, companyId)
+  await validateCompanyAccess(user.id, companyId)
 
   // Get integration
   const integration = await prisma.integration.findFirst({

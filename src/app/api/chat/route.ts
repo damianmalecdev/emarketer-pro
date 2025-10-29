@@ -1,13 +1,14 @@
 // src/app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/nextAuthOptions'
+import { createClient } from '@/lib/supabase/server'
 import { getChatCompletion } from '@/lib/openai'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -22,11 +23,11 @@ export async function POST(req: NextRequest) {
 
   try {
     // Build context from user's data
-    const context = await buildMarketingContext(session.user.id, companyId)
+    const context = await buildMarketingContext(user.id, companyId)
 
     // Get conversation history (last 10 messages)
     const history = await prisma.chatMessage.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
       take: 10
     })
@@ -55,12 +56,12 @@ Provide actionable insights, explain metrics clearly, and help optimize campaign
     await prisma.chatMessage.createMany({
       data: [
         {
-          userId: session.user.id,
+          userId: user.id,
           role: 'user',
           content: message
         },
         {
-          userId: session.user.id,
+          userId: user.id,
           role: 'assistant',
           content: assistantMessage || 'I apologize, but I was unable to generate a response.'
         }
@@ -81,14 +82,16 @@ Provide actionable insights, explain metrics clearly, and help optimize campaign
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const messages = await prisma.chatMessage.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: 'asc' },
       take: 50
     })

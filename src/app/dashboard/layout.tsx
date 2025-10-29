@@ -1,10 +1,12 @@
 // src/app/dashboard/layout.tsx
 'use client'
 
-import { useSession, signOut } from 'next-auth/react'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useCompany } from '@/hooks/useCompany'
 import { Button } from '@/components/ui/button'
+import { CompanySwitcher } from '@/components/CompanySwitcher'
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -18,17 +20,23 @@ import Link from 'next/link'
 import { useEffect } from 'react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const { activeCompany, companies, setActiveCompany } = useCompany()
+  const supabase = createClient()
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!loading && !user) {
       router.push('/auth/signin')
     }
-  }, [status, router])
+  }, [user, loading, router])
 
-  if (status === 'loading') {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/signin')
+  }
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -39,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
@@ -63,6 +71,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h1 className="text-2xl font-bold">eMarketer.pro</h1>
         </div>
         
+        {/* Company Switcher */}
+        <div className="p-4 border-b border-gray-800" suppressHydrationWarning>
+          <CompanySwitcher className="text-white" />
+        </div>
+        
         <nav className="flex-1 overflow-y-auto py-4">
           {navigation.map((item) => (
             <Link
@@ -77,35 +90,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="p-4 border-t border-gray-800">
-          {/* Company Selector */}
-          {companies.length > 1 && (
-            <div className="mb-4">
-              <select
-                value={activeCompany?.id || ''}
-                onChange={(e) => {
-                  const company = companies.find(c => c.id === e.target.value)
-                  if (company) setActiveCompany(company)
-                }}
-                className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm"
-              >
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{session.user.name}</p>
+              <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
               <p className="text-xs text-gray-400 truncate">{activeCompany?.name}</p>
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => signOut({ callbackUrl: '/' })}
+              onClick={handleSignOut}
               className="flex-shrink-0 ml-2"
             >
               <LogOut className="h-4 w-4" />

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/nextAuthOptions'
+import { createClient } from '@/lib/supabase/server'
 import { validateCompanyAccess } from '@/lib/permissions'
 
 async function getAccessToken(companyId: string) {
@@ -15,9 +14,13 @@ export async function GET(req: Request) {
     const companyId = searchParams.get('companyId')
     if (!companyId) return NextResponse.json({ error: 'companyId required' }, { status: 400 })
 
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const ok = await validateCompanyAccess(session.user.id, companyId)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const ok = await validateCompanyAccess(user.id, companyId)
     if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const token = await getAccessToken(companyId)

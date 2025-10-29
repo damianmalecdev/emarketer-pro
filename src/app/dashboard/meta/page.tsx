@@ -30,7 +30,7 @@ export default function MetaPage() {
   useEffect(() => {
     if (!activeCompany) return
     setLoading(true)
-    fetch(`/api/meta/accounts?companyId=${activeCompany.id}`)
+    fetch(`/api/meta-ads/accounts?companyId=${activeCompany.id}`)
       .then(r => r.json())
       .then(d => {
         setAccounts(d.accounts || [])
@@ -43,17 +43,20 @@ export default function MetaPage() {
   useEffect(() => {
     if (!activeCompany || !selectedAccount) return
     setLoading(true)
-    Promise.all([
-      fetch(`/api/meta/campaigns?companyId=${activeCompany.id}&accountId=${selectedAccount}`).then(r => r.json()),
-      fetch(`/api/meta/insights?companyId=${activeCompany.id}&accountId=${selectedAccount}&since=${range.since}&until=${range.until}`).then(r => r.json()),
-    ])
-      .then(([c, i]) => {
-        setCampaigns(c.campaigns || [])
-        setMetrics(i.metrics || {})
+    
+    // Fetch campaigns from new API
+    fetch(`/api/meta-ads/campaigns?accountId=${selectedAccount}`)
+      .then(r => r.json())
+      .then(d => {
+        setCampaigns(d.campaigns || [])
       })
-      .catch(() => setError("Failed to load data"))
+      .catch(() => setError("Failed to load campaigns"))
       .finally(() => setLoading(false))
-  }, [activeCompany, selectedAccount, range.since, range.until])
+    
+    // Note: Metrics require a campaign ID, so we'll load them separately when needed
+    // For now, just set empty metrics
+    setMetrics({})
+  }, [activeCompany, selectedAccount])
 
   if (!activeCompany) {
     return (
@@ -155,7 +158,20 @@ export default function MetaPage() {
                 <Button variant="outline" size="sm" onClick={() => {
                   if (!activeCompany || !selectedAccount) return
                   setLoading(true)
-                  fetch(`/api/integrations/meta/sync?companyId=${activeCompany.id}`)
+                  fetch(`/api/meta-ads/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accountId: selectedAccount })
+                  })
+                    .then(r => r.json())
+                    .then(d => {
+                      if (d.success) {
+                        alert('Sync started successfully!')
+                      } else {
+                        alert('Sync failed: ' + d.error)
+                      }
+                    })
+                    .catch(() => alert('Sync failed'))
                     .finally(() => setLoading(false))
                 }}>Sync now</Button>
               </div>

@@ -22,6 +22,7 @@ export default function Settings() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState<string | null>(null)
 
   useEffect(() => {
     if (activeCompany?.id) {
@@ -69,6 +70,35 @@ export default function Settings() {
       console.error(`Error connecting ${platform}:`, error)
     } finally {
       setConnecting(null)
+    }
+  }
+
+  const handleSync = async (platform: string) => {
+    if (!activeCompany?.id) return
+    
+    setSyncing(platform)
+
+    try {
+      const res = await fetch('/api/integrations/google-ads/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: activeCompany.id })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        // Show success message
+        console.log('Sync completed:', data)
+        // You could add a toast notification here
+      } else {
+        console.error('Sync failed:', data.error)
+        // You could add an error toast here
+      }
+    } catch (error) {
+      console.error(`Error syncing ${platform}:`, error)
+    } finally {
+      setSyncing(null)
     }
   }
 
@@ -160,6 +190,23 @@ export default function Settings() {
                   <div className="flex items-center gap-2">
                     {isConnected && (
                       <CheckCircle className="h-5 w-5 text-green-600" />
+                    )}
+                    {isConnected && platform.id === 'google-ads' && (
+                      <Button
+                        onClick={() => handleSync(platform.id)}
+                        disabled={syncing === platform.id}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {syncing === platform.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          'Sync Now'
+                        )}
+                      </Button>
                     )}
                     <Button
                       onClick={() => handleConnect(platform.id)}

@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  app:
+    image: node:20-alpine
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm ci && npm run dev"
+    environment:
+      - NODE_ENV=development
+      - NEXTAUTH_URL=http://localhost:3010
+      - MCP_META_ADS_URL=http://mcp-meta-ads:8923
+    ports:
+      - "3010:3000"
+    depends_on:
+      - postgres
+      - mcp-meta-ads
+
+  mcp-meta-ads:
+    image: node:20-alpine
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm ci && npm run mcp:meta-ads"
+    environment:
+      - NODE_ENV=development
+      - MCP_META_ADS_PORT=8923
+    ports:
+      - "8924:8923"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: emarketer_pro
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: {}
+
+

@@ -69,13 +69,62 @@ export async function GET(req: NextRequest) {
     const accessToken = longLivedData.access_token || tokenData.access_token
     const expiresIn = longLivedData.expires_in || tokenData.expires_in
 
-    // Save integration to company
+    // Fetch ad accounts from Meta API
+    const accountsUrl = `https://graph.facebook.com/v21.0/me/adaccounts?` +
+      `access_token=${accessToken}` +
+      `&fields=id,account_id,name,account_status,currency,timezone_name,business`
+
+    const accountsResponse = await fetch(accountsUrl)
+    const accountsData = await accountsResponse.json()
+
+    if (!accountsData.data || accountsData.data.length === 0) {
+      return NextResponse.redirect(
+        new URL('/dashboard/settings?error=no_ad_accounts', req.url)
+      )
+    }
+
+    // Save each ad account to MetaAdsAccount table
+    for (const accountData of accountsData.data) {
+      await prisma.metaAdsAccount.upsert({
+        where: {
+          companyId_accountId: {
+            companyId,
+            accountId: accountData.account_id,
+          }
+        },
+        create: {
+          companyId,
+          accountId: accountData.account_id,
+          name: accountData.name,
+          accountStatus: accountData.account_status || 1,
+          currency: accountData.currency || 'USD',
+          timezone: accountData.timezone_name || 'America/New_York',
+          accountType: accountData.business ? 'BUSINESS' : 'PERSONAL',
+          accessToken: accessToken,
+          tokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+          businessManagerIdRef: accountData.business?.id,
+          isActive: true,
+        },
+        update: {
+          name: accountData.name,
+          accountStatus: accountData.account_status || 1,
+          currency: accountData.currency || 'USD',
+          timezone: accountData.timezone_name || 'America/New_York',
+          accessToken: accessToken,
+          tokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+          businessManagerIdRef: accountData.business?.id,
+          isActive: true,
+        }
+      })
+    }
+
+    // Also save to old Integration table for backward compatibility
     await prisma.integration.upsert({
       where: {
         companyId_platform_accountId: {
           companyId,
           platform: 'meta',
-          accountId: 'pending' // Will be updated after first sync
+          accountId: accountsData.data[0].account_id
         }
       },
       create: {
@@ -84,12 +133,16 @@ export async function GET(req: NextRequest) {
         accessToken: accessToken,
         refreshToken: null,
         expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
-        accountId: 'pending',
+        accountId: accountsData.data[0].account_id,
+        accountName: accountsData.data[0].name,
+        currency: accountsData.data[0].currency,
         isActive: true
       },
       update: {
         accessToken: accessToken,
         expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+        accountName: accountsData.data[0].name,
+        currency: accountsData.data[0].currency,
         isActive: true
       }
     })

@@ -22,9 +22,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    console.log('🔍 Google Ads callback started')
+    console.log('🔍 Code:', code)
+    console.log('🔍 State:', stateStr)
+    
     // Parse state
     const state = JSON.parse(stateStr)
     const { userId, companyId } = state
+    console.log('🔍 Parsed state:', { userId, companyId })
 
     // Validate company access
     const membership = await prisma.membership.findUnique({
@@ -34,22 +39,33 @@ export async function GET(req: NextRequest) {
     })
 
     if (!membership) {
+      console.log('❌ No membership found for user:', userId, 'company:', companyId)
       return NextResponse.redirect(
         new URL('/dashboard/settings?error=access_denied', req.url)
       )
     }
 
+    console.log('✅ Membership found:', membership.id)
+
     // Exchange code for tokens
+    console.log('🔍 Creating OAuth2 client...')
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ADS_CLIENT_ID,
       process.env.GOOGLE_ADS_CLIENT_SECRET,
       `${process.env.NEXTAUTH_URL}/api/integrations/google-ads/callback`
     )
 
+    console.log('🔍 Exchanging code for tokens...')
     const { tokens } = await oauth2Client.getToken(code)
+    console.log('✅ Tokens received:', { 
+      access_token: tokens.access_token ? 'present' : 'missing',
+      refresh_token: tokens.refresh_token ? 'present' : 'missing',
+      expiry_date: tokens.expiry_date
+    })
 
     // Save integration to company
-    await prisma.integration.upsert({
+    console.log('🔍 Saving integration to database...')
+    const integration = await prisma.integration.upsert({
       where: {
         companyId_platform_accountId: {
           companyId,
@@ -73,12 +89,18 @@ export async function GET(req: NextRequest) {
         isActive: true
       }
     })
+    console.log('✅ Integration saved:', integration.id)
 
     return NextResponse.redirect(
       new URL('/dashboard/settings?success=google_ads_connected', req.url)
     )
   } catch (error) {
-    console.error('Google Ads callback error:', error)
+    console.error('❌ Google Ads callback error:', error)
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return NextResponse.redirect(
       new URL('/dashboard/settings?error=oauth_failed', req.url)
     )
