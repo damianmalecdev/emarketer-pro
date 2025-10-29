@@ -12,6 +12,8 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
+  // Prevent connection issues with prepared statements
+  errorFormat: 'minimal',
 })
 
 // Force cleanup on hot reload in development
